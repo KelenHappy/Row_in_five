@@ -30,17 +30,20 @@ def writeChessBoard(chess: Chess, player: int):
         if chess.setXY(x, y, player) == True:
             return x, y
 
-def go(fileName: str, chess: Chess):
+def go(fileName: str, chess: Chess, playerRole: str):
     f = open(fileName)
     data = f.readlines()
     player, co_player = 1, 0
-    if fileName=='a.txt':                       # 'a.txt' player 是 0
+    if playerRole=='A':                       # playerA 是 0
         player = 0
         co_player = 1
     if data[0][0] =='W':
-        coor = data[1].split()
+        coor = data[1].split()        
         x, y = int(coor[0]), int(coor[1])        
-        print('2:', x, y)
+        if player==1 and x==0 and y==0:                       #後下，要有對手先下的資料
+            f.close()
+            return False, 0, 0
+        print(playerRole+':2:', x, y)
         chess.setXY(x, y, co_player)            # 將Server傳來 另一位玩家的x, y 寫入棋盤資料
         x, y = writeChessBoard(chess, player)   # 本身產生 x, y，並寫入棋盤資料
         print('1:', x, y)
@@ -53,16 +56,17 @@ def go(fileName: str, chess: Chess):
 
 def main():
     chess = Chess()
-    fileName = 'a.txt'
+    fileName = input('fileName: ')
+    playerRole = input('Player A/B: ')
     random.seed()
     count = 0
     while True:
-        flag, x, y = go(fileName, chess)
+        flag, x, y = go(fileName, chess, playerRole)
         if flag==True:
            count += 1    
            print(count)
            chess.printChess()           
            if count>50: break
-        time.sleep(2)
+        time.sleep(0.3)
     
-main()       
+main()    
