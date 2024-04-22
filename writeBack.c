@@ -161,13 +161,13 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
         for (int i = 1; i <= 20; i++) {
             for (int j = 1; j <= 20; j++) {
                 if (setXY(chess, i, j, player)) {
-                    int score = minimax(chess, depth - 1, 0, 1 - player, bestX, bestY);
+                    int score = minimax(chess, depth - 1, 0, 1 - player, NULL, NULL); // Pass NULL for bestX and bestY
                     if (score > bestScore) {
                         bestScore = score;
                         *bestX = i;
                         *bestY = j;
                     }
-                    // 撤销当前步骤
+                    // Undo the current step
                     chess->size--;
                 }
             }
@@ -177,13 +177,13 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
         for (int i = 1; i <= 20; i++) {
             for (int j = 1; j <= 20; j++) {
                 if (setXY(chess, i, j, player)) {
-                    int score = minimax(chess, depth - 1, 1, 1 - player, bestX, bestY);
+                    int score = minimax(chess, depth - 1, 1, 1 - player, NULL, NULL); // Pass NULL for bestX and bestY
                     if (score < bestScore) {
                         bestScore = score;
                         *bestX = i;
                         *bestY = j;
                     }
-                    // 撤销当前步骤
+                    // Undo the current step
                     chess->size--;
                 }
             }
@@ -193,9 +193,24 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
     return bestScore;
 }
 
+
 void writeChessBoard(Chess* chess, int player, int* x, int* y) {
     int bestX, bestY;
     minimax(chess, 3, 1, player, &bestX, &bestY);
     *x = bestX;
     *y = bestY;
+	if (setXY(chess, *x, *y, player) == 1) {
+            return;
+    }
 }
+/*
+void writeChessBoard(Chess* chess, int player, int* x, int* y) {
+    int bestX, bestY;
+    minimax(chess, 3, 1, player, &bestX, &bestY);
+    *x = rand()%20+1;
+    *y = rand()%20+1;
+	if (setXY(chess, *x, *y, player) == 1) {
+            return;
+    }
+}
+*/
