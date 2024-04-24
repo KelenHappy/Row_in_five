@@ -193,16 +193,25 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
     return bestScore;
 }
 
-
 void writeChessBoard(Chess* chess, int player, int* x, int* y) {
-    int bestX, bestY;
-    minimax(chess, 3, 1, player, &bestX, &bestY);
-    *x = bestX;
-    *y = bestY;
-	if (setXY(chess, *x, *y, player) == 1) {
-            return;
+    if (chess->size == 0) {
+        // 如果棋盘上没有棋子，则默认下一步棋为正中心位置
+        *x = BOARD_SIZE / 2;
+        *y = BOARD_SIZE / 2;
+    } else {
+        // 如果棋盘上有棋子，则使用 minimax 算法确定下一步棋的位置
+        int bestX, bestY;
+        minimax(chess, 3, 1, player, &bestX, &bestY);
+        *x = bestX;
+        *y = bestY;
+    }
+
+    // 如果下一步棋的位置有效，则在棋盘上落子
+    if (setXY(chess, *x, *y, player) == 1) {
+        return;
     }
 }
+
 /*
 void writeChessBoard(Chess* chess, int player, int* x, int* y) {
     int bestX, bestY;
