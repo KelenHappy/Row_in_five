@@ -5,6 +5,16 @@
 
 #define BOARD_SIZE 20
 
+// Initialize the chess board
+void initChess(Chess* chess) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            chess->board[i][j] = -1;
+        }
+    }
+    chess->size = 0;
+}
+
 // This function should check if placing a piece at (x, y) for player is valid and update the board if valid.
 int setXY(Chess* chess, int x, int y, int player) {
     // Ensure coordinates are within bounds and the position is not already occupied
@@ -114,6 +124,7 @@ int evaluateBoard(Chess* chess, int player) {
                     }
                 }
                 if (count >= 5) score += 100;
+                else score += count * 10;
 
                 // Vertical
                 count = 0;
@@ -125,6 +136,7 @@ int evaluateBoard(Chess* chess, int player) {
                     }
                 }
                 if (count >= 5) score += 100;
+                else score += count * 10;
 
                 // Diagonal
                 count = 0;
@@ -136,6 +148,7 @@ int evaluateBoard(Chess* chess, int player) {
                     }
                 }
                 if (count >= 5) score += 100;
+                else score += count * 10;
 
                 // Anti-diagonal
                 count = 0;
@@ -147,6 +160,7 @@ int evaluateBoard(Chess* chess, int player) {
                     }
                 }
                 if (count >= 5) score += 100;
+                else score += count * 10;
             }
         }
     }
@@ -154,53 +168,60 @@ int evaluateBoard(Chess* chess, int player) {
     return score;
 }
 
-// Minimax algorithm
-int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* bestX, int* bestY) {
+// Alpha-beta pruning for minimax algorithm
+int minimax(Chess* chess, int depth, int alpha, int beta, int maximizingPlayer, int player, int* bestX, int* bestY) {
     int gameState = isGameOver(chess, player);
     if (depth == 0 || gameState != 0) {
         return evaluateBoard(chess, player);
     }
 
-    int bestScore;
     if (maximizingPlayer) {
-        bestScore = INT_MIN;
+        int maxEval = INT_MIN;
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 if (chess->board[i][j] == -1) {
                     setXY(chess, i, j, player);
-                    int score = minimax(chess, depth - 1, 0, 1 - player, NULL, NULL);
+                    int eval = minimax(chess, depth - 1, alpha, beta, 0, 1 - player, NULL, NULL);
                     unsetXY(chess, i, j);
-                    if (score > bestScore) {
-                        bestScore = score;
+                    if (eval > maxEval) {
+                        maxEval = eval;
                         if (bestX != NULL && bestY != NULL) {
                             *bestX = i;
                             *bestY = j;
                         }
                     }
+                    alpha = alpha > eval ? alpha : eval;
+                    if (beta <= alpha) {
+                        break;
+                    }
                 }
             }
         }
+        return maxEval;
     } else {
-        bestScore = INT_MAX;
+        int minEval = INT_MAX;
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 if (chess->board[i][j] == -1) {
                     setXY(chess, i, j, player);
-                    int score = minimax(chess, depth - 1, 1, 1 - player, NULL, NULL);
+                    int eval = minimax(chess, depth - 1, alpha, beta, 1, 1 - player, NULL, NULL);
                     unsetXY(chess, i, j);
-                    if (score < bestScore) {
-                        bestScore = score;
+                    if (eval < minEval) {
+                        minEval = eval;
                         if (bestX != NULL && bestY != NULL) {
                             *bestX = i;
                             *bestY = j;
                         }
                     }
+                    beta = beta < eval ? beta : eval;
+                    if (beta <= alpha) {
+                        break;
+                    }
                 }
             }
         }
+        return minEval;
     }
-
-    return bestScore;
 }
 
 // Write the next move on the chess board
@@ -212,7 +233,7 @@ void writeChessBoard(Chess* chess, int player, int* x, int* y) {
     } else {
         // Use minimax to determine the best move
         int bestX, bestY;
-        minimax(chess, 3, 1, player, &bestX, &bestY);
+        minimax(chess, 3, INT_MIN, INT_MAX, 1, player, &bestX, &bestY);
         *x = bestX;
         *y = bestY;
     }
