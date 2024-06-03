@@ -1,148 +1,152 @@
 #include "chessData.h"
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #define BOARD_SIZE 20
 
+// This function should check if placing a piece at (x, y) for player is valid and update the board if valid.
+int setXY(Chess* chess, int x, int y, int player) {
+    // Ensure coordinates are within bounds and the position is not already occupied
+    if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || chess->board[x][y] != -1) {
+        return 0; // Invalid move
+    }
+    chess->board[x][y] = player; // Place the piece
+    chess->cord[chess->size].x = x; // Update the coordinates
+    chess->cord[chess->size].y = y;
+    chess->cord[chess->size].player = player;
+    chess->size++;
+    return 1; // Move was valid and successfully placed
+}
+
+// This function should remove a piece at (x, y)
+void unsetXY(Chess* chess, int x, int y) {
+    chess->board[x][y] = -1; // Clear the piece
+    chess->size--;
+}
+
+// Check if the game is over
 int isGameOver(Chess* chess, int player) {
-    // 检查是否有一方连成五子
     for (int i = 0; i < chess->size; i++) {
-        int count = 1; // 计数器初始化为1，因为已经有一子在该位置
         int x = chess->cord[i].x;
         int y = chess->cord[i].y;
 
-        // 水平方向
+        // Horizontal check
+        int count = 1;
         for (int dx = 1; dx < 5; dx++) {
-            if (setXY(chess, x + dx, y, player)) {
+            if (x + dx < BOARD_SIZE && chess->board[x + dx][y] == player) {
                 count++;
             } else {
                 break;
             }
         }
-        if (count >= 5) return 1; // 如果有五子连成一线，返回游戏结束
+        if (count >= 5) return 1;
 
-        // 垂直方向
-        count = 1; // 重新初始化计数器
+        // Vertical check
+        count = 1;
         for (int dy = 1; dy < 5; dy++) {
-            if (setXY(chess, x, y + dy, player)) {
+            if (y + dy < BOARD_SIZE && chess->board[x][y + dy] == player) {
                 count++;
             } else {
                 break;
             }
         }
-        if (count >= 5) return 1; // 如果有五子连成一线，返回游戏结束
+        if (count >= 5) return 1;
 
-        // 左斜方向
-        count = 1; // 重新初始化计数器
+        // Diagonal check (/)
+        count = 1;
         for (int d = 1; d < 5; d++) {
-            if (setXY(chess, x + d, y + d, player)) {
+            if (x + d < BOARD_SIZE && y + d < BOARD_SIZE && chess->board[x + d][y + d] == player) {
                 count++;
             } else {
                 break;
             }
         }
-        if (count >= 5) return 1; // 如果有五子连成一线，返回游戏结束
+        if (count >= 5) return 1;
 
-        // 右斜方向
-        count = 1; // 重新初始化计数器
+        // Anti-diagonal check (\)
+        count = 1;
         for (int d = 1; d < 5; d++) {
-            if (setXY(chess, x + d, y - d, player)) {
+            if (x + d < BOARD_SIZE && y - d >= 0 && chess->board[x + d][y - d] == player) {
                 count++;
             } else {
                 break;
             }
         }
-        if (count >= 5) return 1; // 如果有五子连成一线，返回游戏结束
+        if (count >= 5) return 1;
     }
 
-    // 如果没有玩家连成五子，且棋盘已满，则游戏平局
+    // Check for a draw
     if (chess->size == BOARD_SIZE * BOARD_SIZE) return -1;
 
-    // 游戏还未结束
     return 0;
 }
 
+// Evaluate the board for a given player
 int evaluateBoard(Chess* chess, int player) {
     int score = 0;
-    int opponent = (player == 1) ? 0 : 1; // 对手的玩家
+    int opponent = 1 - player;
 
-    // 计算每个玩家的连线数量并给予分数
-    int playerCount = 0;
-    int opponentCount = 0;
-    for (int i = 0; i < chess->size; i++) {
-        if (chess->cord[i].player == player) {
-            playerCount++;
-        } else {
-            opponentCount++;
-        }
-    }
-    score += (playerCount - opponentCount) * 10;
-
-    // 棋盘的中心控制
+    // Central control
     int centerControl = 0;
-    for (int i = 0; i < chess->size; i++) {
-        if (chess->cord[i].x >= 8 && chess->cord[i].x <= 15 && chess->cord[i].y >= 8 && chess->cord[i].y <= 15) {
-            if (chess->cord[i].player == player) {
+    for (int i = 8; i <= 15; i++) {
+        for (int j = 8; j <= 15; j++) {
+            if (chess->board[i][j] == player) {
                 centerControl++;
-            } else {
+            } else if (chess->board[i][j] == opponent) {
                 centerControl--;
             }
         }
     }
     score += centerControl * 20;
 
-    // 检查连线情况
-    // 水平方向
-    for (int i = 0; i < 20; i++) {
-        int count = 0;
-        for (int j = 0; j < 20; j++) {
-            if (setXY(chess, i, j, player)) {
-                count++;
-            } else {
-                count = 0;
-            }
-            if (count >= 5) {
-                score += 100;
-            }
-        }
-    }
-    // 垂直方向
-    for (int j = 0; j < 20; j++) {
-        int count = 0;
-        for (int i = 0; i < 20; i++) {
-            if (setXY(chess, i, j, player)) {
-                count++;
-            } else {
-                count = 0;
-            }
-            if (count >= 5) {
-                score += 100;
-            }
-        }
-    }
-    // 对角线方向
-    for (int i = 0; i < 20; i++) {
-        for (int j = 0; j < 20; j++) {
-            int count1 = 0, count2 = 0;
-            for (int k = 0; k < 20; k++) {
-                if (i + k < 20 && j + k < 20) {
-                    if (setXY(chess, i + k, j + k, player)) {
-                        count1++;
+    // Line checking and scoring
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (chess->board[i][j] == player) {
+                // Horizontal
+                int count = 0;
+                for (int dx = 0; dx < 5 && i + dx < BOARD_SIZE; dx++) {
+                    if (chess->board[i + dx][j] == player) {
+                        count++;
                     } else {
-                        count1 = 0;
-                    }
-                    if (count1 >= 5) {
-                        score += 100;
+                        break;
                     }
                 }
-                if (i + k < 20 && j - k >= 0) {
-                    if (setXY(chess, i + k, j - k, player)) {
-                        count2++;
+                if (count >= 5) score += 100;
+
+                // Vertical
+                count = 0;
+                for (int dy = 0; dy < 5 && j + dy < BOARD_SIZE; dy++) {
+                    if (chess->board[i][j + dy] == player) {
+                        count++;
                     } else {
-                        count2 = 0;
-                    }
-                    if (count2 >= 5) {
-                        score += 100;
+                        break;
                     }
                 }
+                if (count >= 5) score += 100;
+
+                // Diagonal
+                count = 0;
+                for (int d = 0; d < 5 && i + d < BOARD_SIZE && j + d < BOARD_SIZE; d++) {
+                    if (chess->board[i + d][j + d] == player) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                if (count >= 5) score += 100;
+
+                // Anti-diagonal
+                count = 0;
+                for (int d = 0; d < 5 && i + d < BOARD_SIZE && j - d >= 0; d++) {
+                    if (chess->board[i + d][j - d] == player) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                if (count >= 5) score += 100;
             }
         }
     }
@@ -150,8 +154,10 @@ int evaluateBoard(Chess* chess, int player) {
     return score;
 }
 
+// Minimax algorithm
 int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* bestX, int* bestY) {
-    if (depth == 0 || isGameOver(chess, player)) {
+    int gameState = isGameOver(chess, player);
+    if (depth == 0 || gameState != 0) {
         return evaluateBoard(chess, player);
     }
 
@@ -160,8 +166,10 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
         bestScore = INT_MIN;
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
-                if (setXY(chess, i, j, player)) {
-                    int score = minimax(chess, depth - 1, 0, 1 - player, NULL, NULL); // Pass NULL for bestX and bestY
+                if (chess->board[i][j] == -1) {
+                    setXY(chess, i, j, player);
+                    int score = minimax(chess, depth - 1, 0, 1 - player, NULL, NULL);
+                    unsetXY(chess, i, j);
                     if (score > bestScore) {
                         bestScore = score;
                         if (bestX != NULL && bestY != NULL) {
@@ -169,8 +177,6 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
                             *bestY = j;
                         }
                     }
-                    // Undo the current step
-                    chess->size--;
                 }
             }
         }
@@ -178,8 +184,10 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
         bestScore = INT_MAX;
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
-                if (setXY(chess, i, j, player)) {
-                    int score = minimax(chess, depth - 1, 1, 1 - player, NULL, NULL); // Pass NULL for bestX and bestY
+                if (chess->board[i][j] == -1) {
+                    setXY(chess, i, j, player);
+                    int score = minimax(chess, depth - 1, 1, 1 - player, NULL, NULL);
+                    unsetXY(chess, i, j);
                     if (score < bestScore) {
                         bestScore = score;
                         if (bestX != NULL && bestY != NULL) {
@@ -187,8 +195,6 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
                             *bestY = j;
                         }
                     }
-                    // Undo the current step
-                    chess->size--;
                 }
             }
         }
@@ -197,19 +203,20 @@ int minimax(Chess* chess, int depth, int maximizingPlayer, int player, int* best
     return bestScore;
 }
 
+// Write the next move on the chess board
 void writeChessBoard(Chess* chess, int player, int* x, int* y) {
     if (chess->size == 0) {
-        // 如果棋盘上没有棋子，则默认下一步棋为正中心位置
+        // Place the first piece in the center
         *x = BOARD_SIZE / 2;
         *y = BOARD_SIZE / 2;
     } else {
-        // 如果棋盘上有棋子，则使用 minimax 算法确定下一步棋的位置
+        // Use minimax to determine the best move
         int bestX, bestY;
         minimax(chess, 3, 1, player, &bestX, &bestY);
         *x = bestX;
         *y = bestY;
     }
 
-    // 如果下一步棋的位置有效，则在棋盘上落子
+    // Place the piece on the board
     setXY(chess, *x, *y, player);
 }
