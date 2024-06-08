@@ -1,4 +1,4 @@
-//writeBack.c
+// writeBack.c
 #include "chessData.h"
 #include <limits.h>
 #include <stdio.h>
@@ -27,7 +27,6 @@ void createBoard(Chess* chess, int board[BOARD_SIZE][BOARD_SIZE]) {
     }
 }
 
-// Check if the game is over
 int isGameOver(Chess* chess, int player) {
     int board[BOARD_SIZE][BOARD_SIZE];
     createBoard(chess, board);
@@ -87,8 +86,6 @@ int isGameOver(Chess* chess, int player) {
     return 0;
 }
 
-// Evaluate the board for a given player
-// Evaluate the board for a given player
 int evaluateBoard(Chess* chess, int player) {
     int board[BOARD_SIZE][BOARD_SIZE];
     createBoard(chess, board);
@@ -96,13 +93,14 @@ int evaluateBoard(Chess* chess, int player) {
     int score = 0;
     int opponent = 1 - player;
 
+    // Center Control Heuristic
     int centerControl = 0;
-    for (int i = 8; i <= 15; i++) {
-        for (int j = 8; j <= 15; j++) {
+    for (int i = 8; i <= 10; i++) {
+        for (int j = 8; j <= 10; j++) {
             if (board[i][j] == player) {
-                centerControl--;
-            } else if (board[i][j] == opponent) {
                 centerControl++;
+            } else if (board[i][j] == opponent) {
+                centerControl--;
             }
         }
     }
@@ -113,54 +111,100 @@ int evaluateBoard(Chess* chess, int player) {
             if (board[i][j] == player) {
                 // Horizontal
                 int count = 0;
+                int openLineCount = 0;
                 for (int dx = 0; dx < 5 && i + dx < BOARD_SIZE; dx++) {
                     if (board[i + dx][j] == player) {
                         count++;
+                    } else if (board[i + dx][j] == -1) {
+                        openLineCount++;
                     } else {
                         break;
                     }
                 }
                 if (count >= 5) score += 100;
-                else score += count * 10;
+                else score += count * 10 + openLineCount;
 
                 // Vertical
                 count = 0;
+                openLineCount = 0;
                 for (int dy = 0; dy < 5 && j + dy < BOARD_SIZE; dy++) {
                     if (board[i][j + dy] == player) {
                         count++;
+                    } else if (board[i][j + dy] == -1) {
+                        openLineCount++;
                     } else {
                         break;
                     }
                 }
                 if (count >= 5) score += 100;
-                else score += count * 10;
+                else score += count * 10 + openLineCount;
 
                 // Diagonal
                 count = 0;
+                openLineCount = 0;
                 for (int d = 0; d < 5 && i + d < BOARD_SIZE && j + d < BOARD_SIZE; d++) {
                     if (board[i + d][j + d] == player) {
                         count++;
+                    } else if (board[i + d][j + d] == -1) {
+                        openLineCount++;
                     } else {
                         break;
                     }
                 }
                 if (count >= 5) score += 100;
-                else score += count * 10;
+                else score += count * 10 + openLineCount;
 
                 // Anti-diagonal
                 count = 0;
+                openLineCount = 0;
                 for (int d = 0; d < 5 && i + d < BOARD_SIZE && j - d >= 0; d++) {
                     if (board[i + d][j - d] == player) {
                         count++;
+                    } else if (board[i + d][j - d] == -1) {
+                        openLineCount++;
                     } else {
                         break;
                     }
                 }
                 if (count >= 5) score += 100;
-                else score += count * 10;
+                else score += count * 10 + openLineCount;
             }
         }
     }
+
+    int playerMobility = 0;
+    int opponentMobility = 0;
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] == player) {
+                // Check surrounding empty cells
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (dx != 0 || dy != 0) {  
+                            int newX = i + dx;
+                            int newY = j + dy;
+                            if (newX >= 0 && newX < BOARD_SIZE && newY >= 0 && newY < BOARD_SIZE && board[newX][newY] == -1) {
+                                playerMobility++;
+                            }
+                        }
+                    }
+                }
+            } else if (board[i][j] == opponent) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (dx != 0 || dy != 0) {
+                            int newX = i + dx;
+                            int newY = j + dy;
+                            if (newX >= 0 && newX < BOARD_SIZE && newY >= 0 && newY < BOARD_SIZE && board[newX][newY] == -1) {
+                                opponentMobility++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    score += (playerMobility - opponentMobility) * 5;  // Adjust score based on mobility difference
 
     return score;
 }
@@ -226,8 +270,6 @@ void writeChessBoard(Chess* chess, int player, int* x, int* y) {
         *y = BOARD_SIZE / 2;
     } else {
         int bestX = -1, bestY = -1;
-
-        // 1. Winning Move
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 if (setXY(chess, i, j, player)) {
@@ -241,13 +283,14 @@ void writeChessBoard(Chess* chess, int player, int* x, int* y) {
             }
         }
 
-        // 2. Block Opponent's Win
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 if (setXY(chess, i, j, 1 - player)) {
                     if (isGameOver(chess, 1 - player) == 1) {
                         *x = i;
                         *y = j;
+                        unsetXY(chess, i, j);
+                        setXY(chess, *x, *y, player);  // Place the blocking piece
                         return;
                     }
                     unsetXY(chess, i, j);
@@ -255,13 +298,64 @@ void writeChessBoard(Chess* chess, int player, int* x, int* y) {
             }
         }
 
-        // 3. Fork Opportunity
-        // Your implementation for fork detection
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (setXY(chess, i, j, player)) {
+                    int count = 0;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            if (dx == 0 && dy == 0) continue;
+                            if (i + dx >= 0 && i + dx < BOARD_SIZE && j + dy >= 0 && j + dy < BOARD_SIZE) {
+                                if (setXY(chess, i + dx, j + dy, player)) {
+                                    if (isGameOver(chess, player) == 1) {
+                                        count++;
+                                    }
+                                    unsetXY(chess, i + dx, j + dy);
+                                }
+                            }
+                        }
+                    }
+                    if (count >= 2) {
+                        *x = i;
+                        *y = j;
+                        unsetXY(chess, i, j);
+                        setXY(chess, *x, *y, player);  // Place the fork piece
+                        return;
+                    }
+                    unsetXY(chess, i, j);
+                }
+            }
+        }
 
-        // 4. Block Opponent's Fork
-        // Your implementation for fork blocking
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (setXY(chess, i, j, 1 - player)) {
+                    int count = 0;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            if (dx == 0 && dy == 0) continue;
+                            if (i + dx >= 0 && i + dx < BOARD_SIZE && j + dy >= 0 && j + dy < BOARD_SIZE) {
+                                if (setXY(chess, i + dx, j + dy, 1 - player)) {
+                                    if (isGameOver(chess, 1 - player) == 1) {
+                                        count++;
+                                    }
+                                    unsetXY(chess, i + dx, j + dy);
+                                }
+                            }
+                        }
+                    }
+                    if (count >= 2) {
+                        *x = i;
+                        *y = j;
+                        unsetXY(chess, i, j);
+                        setXY(chess, *x, *y, player);  // Block the opponent's fork
+                        return;
+                    }
+                    unsetXY(chess, i, j);
+                }
+            }
+        }
 
-        // 5. Center Control
         int centerX = BOARD_SIZE / 2;
         int centerY = BOARD_SIZE / 2;
         if (setXY(chess, centerX, centerY, player)) {
@@ -270,30 +364,21 @@ void writeChessBoard(Chess* chess, int player, int* x, int* y) {
             return;
         }
 
-        // 6. Corner Control
-        int corners[4][2] = {{0, 0}, {0, BOARD_SIZE - 1}, {BOARD_SIZE - 1, 0}, {BOARD_SIZE - 1, BOARD_SIZE - 1}};
-        for (int i = 0; i < 4; i++) {
-            if (setXY(chess, corners[i][0], corners[i][1], player)) {
-                *x = corners[i][0];
-                *y = corners[i][1];
-                return;
+        minimax(chess, 3, INT_MIN, INT_MAX, 1, player, &bestX, &bestY);
+        if (bestX >= 0 && bestX < BOARD_SIZE && bestY >= 0 && bestY < BOARD_SIZE) {
+            *x = bestX;
+            *y = bestY;
+        } else {
+            for (int i = 0; i < BOARD_SIZE; i++) {
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    if (setXY(chess, i, j, player)) {
+                        *x = i;
+                        *y = j;
+                        return;
+                    }
+                }
             }
         }
-
-        // If no strategic move found, use minimax
-        minimax(chess, 3, INT_MIN, INT_MAX, 1, player, &bestX, &bestY);
-
-        // Ensure the move is within the board bounds
-        while (bestX < 0 || bestX >= BOARD_SIZE || bestY < 0 || bestY >= BOARD_SIZE) {
-            // Recalculate the move until a valid one is found
-            minimax(chess, 3, INT_MIN, INT_MAX, 1, player, &bestX, &bestY);
-        }
-
-        *x = bestX;
-        *y = bestY;
     }
-
-    // Place the piece on the board
     setXY(chess, *x, *y, player);
 }
-
