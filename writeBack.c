@@ -4,22 +4,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BOARD_SIZE 19
+#define BOARD_SIZE 20
 
-// This function should remove a piece at (x, y)
 void unsetXY(Chess* chess, int x, int y) {
     for (int i = 0; i < chess->size; i++) {
         if (chess->cord[i].x == x && chess->cord[i].y == y) {
-            for (int j = i; j < chess->size - 1; j++) {
-                chess->cord[j] = chess->cord[j + 1];
-            }
+            chess->cord[i] = chess->cord[chess->size - 1];
             chess->size--;
             return;
         }
     }
 }
 
-// Create a temporary board for internal use in functions
 void createBoard(Chess* chess, int board[BOARD_SIZE][BOARD_SIZE]) {
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
@@ -92,6 +88,7 @@ int isGameOver(Chess* chess, int player) {
 }
 
 // Evaluate the board for a given player
+// Evaluate the board for a given player
 int evaluateBoard(Chess* chess, int player) {
     int board[BOARD_SIZE][BOARD_SIZE];
     createBoard(chess, board);
@@ -99,20 +96,18 @@ int evaluateBoard(Chess* chess, int player) {
     int score = 0;
     int opponent = 1 - player;
 
-    // Central control
     int centerControl = 0;
     for (int i = 8; i <= 15; i++) {
         for (int j = 8; j <= 15; j++) {
             if (board[i][j] == player) {
-                centerControl++;
-            } else if (board[i][j] == opponent) {
                 centerControl--;
+            } else if (board[i][j] == opponent) {
+                centerControl++;
             }
         }
     }
     score += centerControl * 20;
 
-    // Line checking and scoring
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] == player) {
@@ -170,7 +165,6 @@ int evaluateBoard(Chess* chess, int player) {
     return score;
 }
 
-// Alpha-beta pruning for minimax algorithm
 int minimax(Chess* chess, int depth, int alpha, int beta, int maximizingPlayer, int player, int* bestX, int* bestY) {
     int gameState = isGameOver(chess, player);
     if (depth == 0 || gameState != 0) {
@@ -226,10 +220,8 @@ int minimax(Chess* chess, int depth, int alpha, int beta, int maximizingPlayer, 
     }
 }
 
-// Write the next move on the chess board
 void writeChessBoard(Chess* chess, int player, int* x, int* y) {
     if (chess->size == 0) {
-        // Place the first piece in the center
         *x = BOARD_SIZE / 2;
         *y = BOARD_SIZE / 2;
     } else {
